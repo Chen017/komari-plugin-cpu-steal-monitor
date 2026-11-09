@@ -41,10 +41,12 @@ test('runtime collects every two minutes and restricts private/public routes', a
         if (name === 'admin:getTaskResultsByTaskId') {
           const baseline = taskCount === 1
           const stdout = baseline ? 'STEALV1 1000 20' : 'STEALV1 3000 120'
-          return {
-            abc: { stdout, exit_code: 0 },
-            hidden: { stdout, exit_code: 0 },
-          }
+          // The real Komari admin:getTaskResultsByTaskId RPC returns an array
+          // with "client"/"result" (not a UUID-keyed stdout map).
+          return [
+            { task_id: String(taskCount), client: 'abc', result: stdout, exit_code: 0, finished_at: '2026-11-09T04:20:00Z' },
+            { task_id: String(taskCount), client: 'hidden', result: stdout, exit_code: 0, finished_at: '2026-11-09T04:20:00Z' },
+          ]
         }
         throw new Error('unexpected RPC: ' + name)
       },
