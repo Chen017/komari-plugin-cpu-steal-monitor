@@ -1,105 +1,156 @@
-# Komari CPU Steal Monitor
+# Komari CPU Steal Monitor Plugin
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Komari Version](https://img.shields.io/badge/Komari-%3E%3D1.4.3-blue)](https://github.com/komari-monitor/komari)
+[![Theme Integration](https://img.shields.io/badge/Theme%20Integration-Komari%20Emerald%20Insights-emerald)](https://github.com/Chen017/komari-theme-emerald-insights)
+[![Komari Emerald Ecosystem](https://img.shields.io/badge/Komari%20Emerald-Ecosystem-10b981)](https://github.com/Chen017/komari-emerald-suite)
 [![CI](https://github.com/Chen017/komari-plugin-cpu-steal-monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/Chen017/komari-plugin-cpu-steal-monitor/actions/workflows/ci.yml)
-[![Komari](https://img.shields.io/badge/Komari-%3E%3D1.4.3-blue)](https://github.com/komari-monitor/komari)
-[![MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
-[![Emerald Suite](https://img.shields.io/badge/Komari-Emerald%20Ecosystem-10b981)](https://github.com/Chen017/komari-emerald-suite)
 
-**每两分钟采集 Linux VPS 的 CPU Steal 百分比；插件可独立运行，也可与 Komari Emerald Insights 主题联动。**
+> [!IMPORTANT]
+> **前置说明与推荐搭配**：
+> 1. **可独立运行**：本插件作为 Komari 服务端后台数据采集与历史服务，每两分钟通过现有 Linux Agent 的远程命令读取 `/proc/stat`，计算 CPU Steal 率并提供历史、汇总与健康诊断 REST API。**插件可完全独立安装与运行**，不依赖特定前端主题，也无需在 VPS 额外安装常驻采集脚本；但 Agent **必须允许远程命令执行**。
+> 2. **强烈推荐搭配主题**：Komari 原生前端并不提供本插件的 Steal 历史可视化。**强烈推荐搭配安装 [Komari Emerald Insights（翡翠洞察）](https://github.com/Chen017/komari-theme-emerald-insights)**，在节点详情现有 CPU / 系统负载图中显示 Steal（2 分钟均值）曲线，并共享实时与历史时间轴。未安装本插件时，主题原有 CPU、负载等图表保持正常。
 
-> **独立模式**：服务器只安装本插件即可采集、保存历史、提供 REST API（历史、汇总及管理员健康状态），不需要更换 Komari 主题，也不需要额外安装 VPS 脚本。
->
-> **主题联动模式（推荐）**：再安装 [Komari Emerald Insights](https://github.com/Chen017/komari-theme-emerald-insights)，在节点详情的原有 CPU / 系统负载图中叠加 Steal 曲线。没安装插件时主题的原生监控保持正常。
+---
 
-## 功能与限制
+## 核心特性
 
-| 能力 | 独立插件 | 搭配 Emerald Insights |
-| --- | --- | --- |
-| Linux /proc/stat 每两分钟只读采样 | ✓ | ✓ |
-| 真实时间戳、90 天历史、持久化 | ✓ | ✓ |
-| HTTP 历史 API / 汇总 API | ✓ | ✓ |
-| 管理员健康诊断 API | ✓ | ✓ |
-| CPU / 负载同图叠加 Steal 曲线 | — | ✓ |
-| 跳过离线/重启/漏采集，不制造 0% | ✓ | ✓ |
+- **真实 CPU Steal 采样**：读取 Linux `/proc/stat` 的累计计数器，使用相邻成功采样之间的 `Δsteal / Δtotal × 100%` 计算 Steal 百分比，默认每 2 分钟采集一次。
+- **独立数据服务**：无须安装主题即可使用 `/v1/history` 查询样本、`/v1/summary` 查询最新值/平均值/最大值/覆盖率、管理员 `/v1/health` 检查采集状态。
+- **正确处理无数据**：初次采样只建立基线；Agent 离线、任务失败、计数器重置或漏采集形成未知区间，**不将缺失值误认为 0%**。
+- **长期持久化**：使用 Komari 提供的 `__storageDir__` 存储历史，默认保留至多 90 天；重启后保留已采集历史。
+- **适配 Komari Emerald Insights**：稳定提供 `GET /api/plugin/cpu-steal-monitor/v1/history`，主题按实际采样时间范围对齐原生时间轴，Steal 与 CPU/负载同图展示。
+- **只读权限边界**：Agent 命令由插件固定，仅读取 `/proc/stat`；匿名访问遵循公共站点与隐藏节点规则，健康诊断仅供管理员访问。
 
-**Steal 是虚拟机遭宿主机抢占的 CPU 时间比例，单位 %；不是 Linux Load Average。** 本插件不提供独立网页仪表盘，也不发送 Telegram 告警；“独立”指插件的采集、数据存储和 API 不依赖主题。
+> [!NOTE]
+> Steal 是虚拟机等待宿主机分配 CPU 时间的比例，单位是 **%**，与没有百分比单位的 Linux Load Average 不同。插件的“独立运行”是指**采集、持久化和 API 独立**；插件本身不额外提供网页图表或消息告警。
 
-## 安装
+---
 
-1. 从 [GitHub Actions](https://github.com/Chen017/komari-plugin-cpu-steal-monitor/actions/workflows/ci.yml) 下载成功构建的安装包；**解开 Actions Artifact 外层 ZIP，选择内部 cpu-steal-monitor.zip**。
-2. 在 Komari 后台的**插件管理**上传内部 ZIP，确认运行权限：node、allowSystemRPC、allowRoutes。
-3. 目标 Linux 节点上的 Komari Agent 必须允许远程执行命令。禁用 Web SSH/远程控制的 Agent 无法被本插件采样；没有额外部署脚本。
-4. 首次采集只建立计数器基线，下一次成功采集才产生 Steal 值，通常需两个完整采样周期。
-5. 可单独调用 API，或安装配套 Emerald Insights 主题查看图表。**在“主题管理”安装主题 ZIP，不要混淆插件 ZIP。**
+## Komari Emerald Insights 集成
 
-## API（不需要主题）
+推荐搭配 [Komari Emerald Insights](https://github.com/Chen017/komari-theme-emerald-insights) 使用，可在节点详情原有 CPU/系统负载图中查看 Steal 率。
 
-所有时间值为 **UTC Unix 毫秒**；采样点代表区间 [from,time] 内的两分钟**平均 Steal%**，而非瞬时值。
+- **调用接口**：`GET /api/plugin/cpu-steal-monitor/v1/history?uuid=...&from=...&to=...`
+- **时间轴兼容**：每条采样携带真实 Unix 毫秒 `from` / `time`，代表该两分钟区间的平均 Steal%；历史时间桶按采样区间实际重叠时长聚合，不构造虚假的秒级数据。
+- **图表纵轴**：Steal 与 CPU 共用左侧 0–100% 纵轴；负载使用独立右侧纵轴。较小的 0.1%–1% 变化在当前图中可能不明显，但提示框可显示具体数值。
+- **优雅降级**：未安装插件、API 返回错误或节点尚无采样时，Steal 显示缺失值，不影响主题原有 CPU、系统负载及其他监控。
+- **独立模式**：如果只需要 Steal 数据供脚本或第三方系统消费，**无需安装 Emerald Insights 主题**，直接查询下述 REST API 即可。
 
-| HTTP GET | 用途 | 访问控制 |
-| --- | --- | --- |
-| `/api/plugin/cpu-steal-monitor/v1/history?uuid=NODE_UUID&from=...&to=...` | 单节点原始采样（保留兼容主题的 v1 字段） | 公开站点非隐藏节点 / 管理员 |
-| `/api/plugin/cpu-steal-monitor/v1/summary?uuids=UUID1,UUID2&from=...&to=...` | 独立统计：latest/average/max/sampleCount/observedSeconds/coverageRatio | 同上；不传 uuids 返回可见节点 |
-| `/api/plugin/cpu-steal-monitor/v1/health` | 插件状态、节点上次采集结果、错误、存储路径 | **仅管理员** |
+---
 
-历史查询默认最近 1 小时；汇总默认最近 24 小时。两者支持指定 from/to，最长约 90 天。
+## 安装方式
 
-**历史响应示例：**
-```json
-{"schemaVersion":1,"uuid":"NODE_UUID","intervalSeconds":120,
- "samples":[{"from":1731000000000,"time":1731000120000,"value":2.5}]}
-```
+1. 从本仓库 [GitHub Actions](https://github.com/Chen017/komari-plugin-cpu-steal-monitor/actions/workflows/ci.yml) 的成功构建中下载 `komari-cpu-steal-monitor` Artifact，解压外层 Artifact ZIP，取出真正的 **`cpu-steal-monitor.zip`**。正式发布 Release 后，也可以从 Releases 直接下载同名插件 ZIP。
+2. 登录 Komari 管理后台，在 **「插件管理」** 上传 `cpu-steal-monitor.zip` 并启用，批准 `node`、`allowSystemRPC`、`allowRoutes` 权限。
+3. 确保待监控 VPS 使用 Linux，且 Komari Agent **允许远程命令执行**。启用 `disable_web_ssh` / `--disable-web-ssh` 可能同时禁止此能力，导致插件无法采样。
+4. 插件安装后将自动启动两分钟采集。**首次采样仅建立基线**，需要下一次成功采样才会产生 Steal 数据。
+5. 如需前端图表联动，在 Komari **「主题管理」** 另行安装配套 Emerald Insights 主题 ZIP；不要把主题 ZIP 上传到插件管理。
 
-**汇总响应示例：**
-```json
-{"schemaVersion":1,"generatedAt":"2026-11-09T04:00:00.000Z",
- "windowStart":"2026-11-08T04:00:00.000Z","windowEnd":"2026-11-09T04:00:00.000Z","intervalSeconds":120,
- "nodes":[{"uuid":"NODE_UUID","latest":2.5,"lastSampleAt":1731000120000,
- "average":2.5,"max":2.5,"sampleCount":1,"observedSeconds":120,"coverageRatio":0.001388888888888889}]}
-```
+---
 
-响应示例中的数值仅展示字段格式，不代表真实节点数据。没有观测数据时 latest/average/max 为 **null**、coverageRatio 为 0，**绝不将缺失误写为 Steal 0%**。HTTP 接口请求会遵守 Komari 私有站点和隐藏节点设置。
+## 配置项
 
-## 数据准确性
+当前版本**没有开放用户可调的采样周期或历史保留时间配置**，与支持托管配置的 Availability History 不同。
 
-- 只读取 Linux `/proc/stat` 的累计 CPU 计数器；分母为首行 user、nice、system、idle、iowait、irq、softirq、steal，避免重复计算 guest。
-- Steal% = (steal 时间差 / CPU 总时间差) × 100%。
-- 计数器回退、CPU 重启、远程命令失败、采样间隔明显异常时不合成读数，保留真实空缺。
-- 90 天历史保存在 Komari 插件数据目录的 `history.json`；卸载前建议按需备份数据目录。
-- 汇总采用各样本与查询时间段重叠秒数的加权平均；非完整覆盖时 coverageRatio 不会冒充 100%。
-- 主题在实时/1h/6h/1d/7d/30d/90d 图上使用同一时间轴，历史数据按原有时间桶聚合。
+| 项目 | 当前值 | 说明 |
+| :--- | :--- | :--- |
+| 采样周期 | 120 秒 | cron：`*/2 * * * *` |
+| 历史保留 | 最多 90 天 | 自动清理历史数据；并设有每节点样本数量上限 |
+| 采样命令 | 固定只读 | 通过 Komari Agent 读取 Linux `/proc/stat` |
+| 插件权限 | `node`、`allowSystemRPC`、`allowRoutes` | 需在 Komari 插件管理批准 |
+| Agent 前置要求 | 允许远程执行 | 关闭远程控制的节点无法获取 Steal 数据 |
 
-## 诊断 Steal -%
+---
 
-如果主题一直显示 `Steal -%`，请先查看管理员 `/v1/health` 中各节点 status：
+## 数据持久化
 
-| status | 说明 |
-| --- | --- |
-| `warming_up` | 第一次采集成功，等待下一周期 |
-| `ok` | 两次累计计数器计算成功，已产生 Steal 样本 |
-| `remote_command_failed` | Agent 禁用或拒绝了远程命令；检查 disable_web_ssh |
-| `invalid_counters` | /proc/stat 读取结果格式无效或不支持 |
-| `timeout` | Agent 不在线、没有及时回复采集任务 |
+插件使用 Komari 提供的长期插件存储目录 `__storageDir__`，默认历史文件为 `history.json`。
 
-同时确认 /v1/history 是否包含 samples。主题会保留无数据状态，不用 “0%” 掩盖采集故障。
+在标准 Docker 部署中，通常位于：
+
+`/app/data/plugin-data/cpu-steal-monitor/history.json`
+
+历史样本记录格式为 `{from,time,value}`：前两者是 UTC Unix 毫秒，`value` 为相应区间的 CPU Steal 平均百分比（0–100）。插件重新加载时会重新建立累计计数器基线，**不会用重启前后的计数器强行计算一个连续样本**。
+
+---
+
+## API 端点
+
+- `GET /api/plugin/cpu-steal-monitor/v1/history?uuid=...&from=...&to=...`（按节点查询两分钟历史；主题消费的兼容接口）
+- `GET /api/plugin/cpu-steal-monitor/v1/summary?uuids=uuid1,uuid2&from=...&to=...`（独立汇总，返回 `latest`、`average`、`max`、`sampleCount`、`observedSeconds`、`coverageRatio`）
+- `GET /api/plugin/cpu-steal-monitor/v1/health`（**仅管理员**；采集状态、节点诊断、最后成功时间与存储信息）
+
+`history` 默认最近 1 小时，`summary` 默认最近 24 小时；`from` / `to` 为 Unix 毫秒，最多查询约 90 天。公开站点的普通访客只能读取非隐藏节点；私有站点须具备相应访问权限。缺失样本返回空数组或 `null`，**真实采样为 0% 才返回数值 0**。
+
+---
 
 ## 开发与维护
 
-使用 Node.js 24，无第三方运行时依赖。运行：
+从项目根目录使用 **Node.js 24** 和 npm。当前没有第三方 npm 依赖，也没有依赖锁文件；安装和构建无需额外的 `npm ci` 步骤。ZIP 验证使用系统 `unzip`。
 
 ```sh
 npm test
-npm run build
 npm run verify
 ```
 
-CI 在 PR 和 main 推送时运行测试、构建、ZIP 结构验证，并上传安装包 Artifact，**不会自动创建 GitHub Release**。测试包括真实 Komari 任务返回结构、缺失区间语义、独立 API 的权限隔离和主题协议兼容。改动 API v1、采样周期或保存格式时必须添加回归测试；细则见 [维护指南](docs/MAINTENANCE.md)。
+`npm run verify` 依次执行 Node 测试、生成 Komari 可导入的 ZIP，以及安装包结构与 manifest 校验。测试包括真实 Komari 远程任务结果结构（`client`、`result`、`exit_code`）、两分钟计数器差值、断连和重启缺口、独立汇总 API、权限隔离及主题历史接口兼容。
+
+| 目录或文件 | 职责 |
+| --- | --- |
+| `script.js`、`logic.cjs` | 生命周期、Komari RPC、数据采集、API 与可测试的 Steal 统计逻辑 |
+| `scripts/build.mjs`、`scripts/test-package.mjs` | 生成独立运行的 `script.js` 和安装包，验证打包内容 |
+| `komari-plugin.json`、`package.json` | 插件标识、权限、最低 Komari 版本和发布版本 |
+| `tests/` | 采样准确性、真实任务结构、访问控制、存储和 API 回归 |
+| `docs/MAINTENANCE.md` | 采样时间轴、数据契约、安全边界、联动和升级维护指南 |
+
+### CI 与发布
+
+GitHub Actions 在面向 `main` 的 PR、`main` 推送以及手动触发时执行 `npm run verify`，上传可安装的 `cpu-steal-monitor.zip` 作为 Artifact，**不会自动创建 GitHub Release**。
+
+正式发布前，请同步 `package.json`、`komari-plugin.json` 和 `script.js` 内部的插件版本，确认 CI 通过，再从目标提交构建、校验 `cpu-steal-monitor.zip`，手动创建对应的 Git Tag / Release 并上传插件 ZIP。当前待合并的功能版本为 **v0.2.0**；只有在相应 PR 合并、验证完成后才建议作为正式版本发布。
+
+### 兼容约定与故障排查
+
+- **样本定义**：`Steal% = Δsteal / Δtotal × 100%`，guest/guest_nice 不可重复计入总时间。采样不是瞬时值。
+- **重启与断连**：首次快照、采样失败、超时、计数器回退、跨度过长时必须保留数据缺口；禁止填零或插值。
+- **主题显示 `Steal -%`**：不要仅继续等待。先检查管理员 `/v1/health` 的节点状态，例如 `warming_up`、`remote_command_failed`、`timeout`，再检查 `/v1/history` 中是否真的有 `samples`。
+- **存储与版本**：保持 `history.json` 和 v1 历史接口的向后兼容。更新接口、持久化格式、采样周期时必须同步回归测试与 [维护指南](docs/MAINTENANCE.md)。
+
+部署前最终验收应在真实 Komari + Linux Agent 环境完成，确认远程命令权限、实际采样及主题图表，而不是只依赖模拟测试。
+
+---
 
 ## Komari Emerald Ecosystem
 
-- [Komari Emerald Insights](https://github.com/Chen017/komari-theme-emerald-insights)：叠加 CPU Steal 图表的前端主题
-- [Availability History](https://github.com/Chen017/komari-plugin-availability-history)：独立的节点在线率账本/API 插件
-- [IPQA Alert Report](https://github.com/Chen017/komari-plugin-ipqa-alert-report)：IP 风险归档/API/通知插件
-- [Komari Emerald Suite](https://github.com/Chen017/komari-emerald-suite)：生态项目总览
+本插件是 **Komari Emerald Ecosystem** 的核心组件之一：
 
-License: [MIT](LICENSE).
+```text
+                           Komari
+                             │
+             ┌───────────────┼───────────────┐
+             │               │               │
+             ▼               ▼               ▼
+ Availability History  CPU Steal Monitor  IPQA Alert Report
+ WebSocket events      /proc/stat + API   Archive / Alerts
+                             │                    ▲
+                             │                    │ archive sync
+                             │              IP-Quality-Archive
+                             │              on monitored VPS
+             └───────────────┼────────────────────┘
+                             ▼
+                  Komari Emerald Insights
+                   (可选前端可视化)
+```
+
+- [Komari Emerald Suite](https://github.com/Chen017/komari-emerald-suite)：生态聚合展示主页
+- [Komari Emerald Insights](https://github.com/Chen017/komari-theme-emerald-insights)：现代化前端监控主题，接入本插件的 Steal 图表
+- [Komari Plugin: Availability History](https://github.com/Chen017/komari-plugin-availability-history)：在线率历史事件账本插件
+- [Komari Plugin: IPQA Alert Report](https://github.com/Chen017/komari-plugin-ipqa-alert-report)：IP 质量归档同步与告警报告插件
+- [IP-Quality-Archive](https://github.com/Chen017/IP-Quality-Archive)：节点端 IP 质量采集工具
+
+---
+
+## License
+
+MIT
