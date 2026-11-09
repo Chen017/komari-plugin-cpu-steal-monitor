@@ -19,8 +19,8 @@ test('runtime collects every two minutes and restricts private/public routes', a
     const server = {
       route(method, endpoint, handler) {
         assert.equal(method, 'GET')
-        assert.equal(endpoint, '/api/plugin/cpu-steal-monitor/v1/history')
-        route = handler
+        assert.ok(endpoint.startsWith('/api/plugin/cpu-steal-monitor/v1/'))
+        if (endpoint === '/api/plugin/cpu-steal-monitor/v1/history') route = handler
       },
       cron(expr, handler) {
         assert.equal(expr, '*/2 * * * *')
