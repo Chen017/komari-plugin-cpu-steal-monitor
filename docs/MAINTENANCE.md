@@ -75,3 +75,7 @@ Actions CI 在 PR/main 上验证并提供可下载 ZIP。独立 `release-on-vers
 ## 管理页纯文本信息（v0.2.1）
 
 `komari-plugin.json` 的 `configuration` 仅声明一个 `type: textbox` 的静态说明区域，参照 Availability History 的插件管理提示。不得加入可提交的开关、输入框或业务配置项。说明需先讲明 CPU Steal 两分钟只读采集、90 天历史和独立 API，再推荐搭配 Komari Emerald Insights（翡翠洞察）主题；主题仅提供可选可视化，不是插件数据采集的前置条件。
+
+## 管理说明可点击链接（v0.2.2）
+
+`komari-plugin.json` 管理页的中文、英文静态 `textbox` 必须包含可点击的 [CPU Steal Monitor 插件仓库](https://github.com/Chen017/komari-plugin-cpu-steal-monitor)、[插件 Releases](https://github.com/Chen017/komari-plugin-cpu-steal-monitor/releases) 及 [Komari Emerald Insights 主题仓库](https://github.com/Chen017/komari-theme-emerald-insights) 链接。全部链接使用 `target="_blank"`、`rel="noopener noreferrer"`。保持无输入框、无业务开关，不让主题成为插件运行的必要条件。更改这些链接需同步更新 `tests/manifest-ui.test.mjs`。

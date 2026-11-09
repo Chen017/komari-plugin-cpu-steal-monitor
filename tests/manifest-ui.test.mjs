@@ -16,6 +16,14 @@ test('managed plugin configuration contains only the no-options recommendation t
     assert.equal(typeof item.name[lang], 'string');
     assert.match(item.name[lang], /Komari Emerald Insights/);
     assert.match(item.name[lang], /<div/);
+    for (const url of [
+      'https://github.com/Chen017/komari-plugin-cpu-steal-monitor',
+      'https://github.com/Chen017/komari-plugin-cpu-steal-monitor/releases',
+      'https://github.com/Chen017/komari-theme-emerald-insights',
+    ]) {
+      assert.ok(item.name[lang].includes(`href="${url}"`), `missing clickable URL ${url} (${lang})`);
+    }
+    assert.equal((item.name[lang].match(/rel="noopener noreferrer"/g) || []).length >= 4, true);
   }
   assert.match(manifest.description['zh-CN'], /独立保存/);
   assert.match(manifest.description['zh-CN'], /强烈推荐/);
