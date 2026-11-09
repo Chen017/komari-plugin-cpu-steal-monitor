@@ -1,0 +1,12 @@
+{
+  "name": "komari-plugin-cpu-steal-monitor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "build": "node scripts/build.mjs",
+    "verify": "npm test && npm run build && unzip -t cpu-steal-monitor.zip"
+  },
+  "license": "MIT"
+}
