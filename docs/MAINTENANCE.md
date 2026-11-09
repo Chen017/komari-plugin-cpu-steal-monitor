@@ -63,7 +63,7 @@ npm run verify
 - 正式 ZIP 顶层 manifest/script.js/icon，构建后无 runtime 本地 require；
 - 安装在测试 Komari 后核对两次采样、健康接口与主题实时/历史时间轴（此项为真实环境验收，不应被单元测试冒充）。
 
-Actions CI 在 PR/main 上验证并提供可下载 ZIP，不自动发 GitHub Release。遇到 Theme Steal -% 优先检查管理员 `/health` 的 node status，并检查 /history 是否有非空 samples，不要将持续无数据归因于正常的两分钟周期。
+Actions CI 在 PR/main 上验证并提供可下载 ZIP。独立 `release-on-version-bump.yml` 在 `main` 推送时检查三处版本号一致性；若当前版本没有 Release，则重新执行 `npm run verify`、创建 `vX.Y.Z` 标签并自动发布含 `cpu-steal-monitor.zip` 的 GitHub Release。已发行的相同版本后续提交跳过，不重复发版。遇到 Theme Steal -% 优先检查管理员 `/health` 的 node status，并检查 /history 是否有非空 samples，不要将持续无数据归因于正常的两分钟周期。
 
 ## 跨仓库联动
 
