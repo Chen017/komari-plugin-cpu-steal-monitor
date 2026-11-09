@@ -24,7 +24,7 @@ test('node list normalization and task status',()=>{
 });
 test('real Komari TaskResult array uses client, result and exit_code',()=>{
  const rows=[
-  {task_id:'task-a',client:'node-uuid-1',result:'STEALV1 12000 20\\n',exit_code:0,finished_at:'2026-11-09T04:20:00Z'},
+  {task_id:'task-a',client:'node-uuid-1',result:'STEALV1 12000 20\n',exit_code:0,finished_at:'2026-11-09T04:20:00Z'},
   {task_id:'task-a',client:'node-uuid-2',result:'',exit_code:null,finished_at:null},
  ];
  const output=L.normalizeResults(rows);
