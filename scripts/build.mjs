@@ -12,14 +12,14 @@ if (manifest.version !== pkg.version || manifest.entry !== 'script.js' || manife
 
 const source = fs.readFileSync(path.join(root, 'script.js'), 'utf8')
 const logic = fs.readFileSync(path.join(root, 'logic.cjs'), 'utf8')
-const marker = "L=require('./logic.cjs');"
+const marker = "const L = require('./logic.cjs');"
 if (!source.includes(marker))
   throw new Error('Expected logic import missing')
 
 // Komari executes script.js as a script, not a Node CommonJS wrapper.
 // Inline the tested helper functions so loading never relies on a custom
 // .cjs resolver in the embedded Komari JS runtime.
-const injected = 'L=(function(){\nvar module={exports:{}};\n' + logic + '\nreturn module.exports;\n})();'
+const injected = 'const L = (function(){\nvar module={exports:{}};\n' + logic + '\nreturn module.exports;\n})();'
 const bundled = source.replace(marker, injected)
 if (bundled.includes("require('./logic.cjs')"))
   throw new Error('Unbundled logic import')
