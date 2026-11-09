@@ -104,11 +104,13 @@ npm run verify
 | `tests/` | 采样准确性、真实任务结构、访问控制、存储和 API 回归 |
 | `docs/MAINTENANCE.md` | 采样时间轴、数据契约、安全边界、联动和升级维护指南 |
 
-### CI 与发布
+### CI 与自动 Release
 
-GitHub Actions 在面向 `main` 的 PR、`main` 推送以及手动触发时执行 `npm run verify`，上传可安装的 `cpu-steal-monitor.zip` 作为 Artifact，**不会自动创建 GitHub Release**。
+- **日常 CI：** `.github/workflows/ci.yml` 在面向 `main` 的 PR、`main` 推送和手动触发时执行 `npm run verify`，并上传 `cpu-steal-monitor.zip` 作为 Actions Artifact。
+- **自动发行：** `.github/workflows/release-on-version-bump.yml` 在 `main` 推送时检查 `package.json`、`komari-plugin.json` 与 `script.js` 中的版本号是否一致。如果当前 `vX.Y.Z` 尚未发布，将重新运行测试与 ZIP 校验，自动创建版本标签和 GitHub Release，并将 **可直接安装**的 `cpu-steal-monitor.zip` 作为 Release 附件；相同版本之后的提交不会重复发布。
+- **版本管理：** 发布新版本前同时修改上述三个位置的版本号，避免主分支中出现版本不一致。自动发布需要仓库 Actions 的 `contents: write` 权限。不需要手动上传构建 ZIP。
 
-正式发布前，请同步 `package.json`、`komari-plugin.json` 和 `script.js` 内部的插件版本，确认 CI 通过，再从目标提交构建、校验 `cpu-steal-monitor.zip`，手动创建对应的 Git Tag / Release 并上传插件 ZIP。当前待合并的功能版本为 **v0.2.0**；只有在相应 PR 合并、验证完成后才建议作为正式版本发布。
+当前版本 **[v0.2.0](https://github.com/Chen017/komari-plugin-cpu-steal-monitor/releases/tag/v0.2.0)** 已通过自动 Release 工作流发布。
 
 ### 兼容约定与故障排查
 
