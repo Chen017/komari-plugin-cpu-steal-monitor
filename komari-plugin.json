@@ -2,14 +2,16 @@
   "$schema": "https://komari-monitor.github.io/plugin-sdk/komari-plugin.schema.json",
   "name": {
     "zh-CN": "CPU Steal 监控",
-    "en": "CPU Steal Monitor"
+    "en": "CPU Steal Monitor",
+    "zh_CN": "CPU Steal 监控"
   },
   "short": "cpu-steal-monitor",
   "description": {
-    "zh-CN": "每两分钟采集 Linux CPU Steal，向 Emerald Insights 提供历史曲线。",
-    "en": "Two-minute Linux CPU steal observations for Emerald Insights."
+    "zh-CN": "每 2 分钟只读采集 Linux CPU Steal，独立存储历史并提供汇总/诊断 API。插件无需配套主题即可工作；强烈推荐搭配 Komari Emerald Insights 主题，在现有 CPU 与负载图表叠加 Steal 曲线。",
+    "zh_CN": "每 2 分钟只读采集 Linux CPU Steal，独立存储历史并提供汇总/诊断 API。插件无需配套主题即可工作；强烈推荐搭配 Komari Emerald Insights 主题，在现有 CPU 与负载图表叠加 Steal 曲线。",
+    "en": "Read-only Linux CPU steal collection every two minutes with independent history, summary and diagnostic APIs. Operates without a theme; recommended Emerald Insights theme integration adds a Steal series to the native CPU/load chart."
   },
-  "version": "0.1.1",
+  "version": "0.2.0",
   "komari": ">=1.4.3",
   "entry": "script.js",
   "icon": "assets/icon.svg",
@@ -19,5 +21,7 @@
     "allowSystemRPC": true,
     "allowRoutes": true,
     "timeout": 60
-  }
+  },
+  "license": "MIT",
+  "repository": "https://github.com/Chen017/komari-plugin-cpu-steal-monitor"
 }
