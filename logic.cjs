@@ -31,7 +31,7 @@ function normalizeResults(raw){
  const rows=Array.isArray(val)?val.map(v=>['',v]):Object.entries(val||{}),res=new Map();
  for(const [key,v]of rows){
   if(!v||typeof v!=='object')continue;
-  const uuid=String(v.client_id||v.client_uuid||v.clientId||v.uuid||v.id||key||'');
+  const uuid=String(v.client||v.client_id||v.client_uuid||v.clientId||v.uuid||v.id||key||'');
   if(!uuid)continue;
   const output=typeof v.stdout==='string'?v.stdout:typeof v.output==='string'?v.output:typeof v.result==='string'?v.result:'';
   const terminal=typeof v.exit_code==='number'||typeof v.exitCode==='number'||Boolean(v.finished_at)||['completed','failed','timeout','error','finished'].includes(String(v.status||'').toLowerCase());
