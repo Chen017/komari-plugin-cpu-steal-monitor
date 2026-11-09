@@ -9,7 +9,7 @@
     "zh-CN": "每两分钟采集 Linux CPU Steal，向 Emerald Insights 提供历史曲线。",
     "en": "Two-minute Linux CPU steal observations for Emerald Insights."
   },
-  "version": "0.1.0",
+  "version": "0.1.1",
   "komari": ">=1.4.3",
   "entry": "script.js",
   "icon": "assets/icon.svg",
