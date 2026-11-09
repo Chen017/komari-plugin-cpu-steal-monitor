@@ -49,7 +49,9 @@
 
 ---
 
-## 配置项
+## 管理页面与配置项
+
+插件管理页面增加**只读的「前置说明与推荐搭配」信息区域**，参照 Availability History 的说明风格，介绍插件独立采集、REST API 和推荐的 Komari Emerald Insights（翡翠洞察）主题；**没有开关、输入框或其他可调配置项**。此信息并非要求安装主题：插件独立运行不受影响。
 
 当前版本**没有开放用户可调的采样周期或历史保留时间配置**，与支持托管配置的 Availability History 不同。
 
@@ -110,7 +112,7 @@ npm run verify
 - **自动发行：** `.github/workflows/release-on-version-bump.yml` 在 `main` 推送时检查 `package.json`、`komari-plugin.json` 与 `script.js` 中的版本号是否一致。如果当前 `vX.Y.Z` 尚未发布，将重新运行测试与 ZIP 校验，自动创建版本标签和 GitHub Release，并将 **可直接安装**的 `cpu-steal-monitor.zip` 作为 Release 附件；相同版本之后的提交不会重复发布。
 - **版本管理：** 发布新版本前同时修改上述三个位置的版本号，避免主分支中出现版本不一致。自动发布需要仓库 Actions 的 `contents: write` 权限。不需要手动上传构建 ZIP。
 
-当前版本 **[v0.2.0](https://github.com/Chen017/komari-plugin-cpu-steal-monitor/releases/tag/v0.2.0)** 已通过自动 Release 工作流发布。
+当前版本 **[v0.2.1](https://github.com/Chen017/komari-plugin-cpu-steal-monitor/releases/tag/v0.2.1)** 由自动 Release 工作流构建并发布。
 
 ### 兼容约定与故障排查
 

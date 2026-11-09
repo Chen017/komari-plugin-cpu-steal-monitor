@@ -7,11 +7,11 @@
   },
   "short": "cpu-steal-monitor",
   "description": {
-    "zh-CN": "每 2 分钟只读采集 Linux CPU Steal，独立存储历史并提供汇总/诊断 API。插件无需配套主题即可工作；强烈推荐搭配 Komari Emerald Insights 主题，在现有 CPU 与负载图表叠加 Steal 曲线。",
-    "zh_CN": "每 2 分钟只读采集 Linux CPU Steal，独立存储历史并提供汇总/诊断 API。插件无需配套主题即可工作；强烈推荐搭配 Komari Emerald Insights 主题，在现有 CPU 与负载图表叠加 Steal 曲线。",
-    "en": "Read-only Linux CPU steal collection every two minutes with independent history, summary and diagnostic APIs. Operates without a theme; recommended Emerald Insights theme integration adds a Steal series to the native CPU/load chart."
+    "zh-CN": "每两分钟通过现有 Linux Agent 只读采集 CPU Steal（宿主机 CPU 抢占率），独立保存 90 天历史并提供历史、汇总及诊断 REST API，无需安装额外 VPS 采集程序，也不依赖前端主题。强烈推荐搭配 Komari Emerald Insights（翡翠洞察）主题，可在节点详情原有 CPU／系统负载图中直观查看 Steal（两分钟均值）曲线与历史变化。",
+    "zh_CN": "每两分钟通过现有 Linux Agent 只读采集 CPU Steal（宿主机 CPU 抢占率），独立保存 90 天历史并提供历史、汇总及诊断 REST API，无需安装额外 VPS 采集程序，也不依赖前端主题。强烈推荐搭配 Komari Emerald Insights（翡翠洞察）主题，可在节点详情原有 CPU／系统负载图中直观查看 Steal（两分钟均值）曲线与历史变化。",
+    "en": "Samples Linux CPU Steal (hypervisor contention) every two minutes using the existing Agent, persists up to 90 days of history, and provides standalone history, summary and diagnostics REST APIs without a separate VPS collector or theme dependency. Strongly recommended with the Komari Emerald Insights theme, which overlays the two-minute Steal history on the existing CPU and system-load chart."
   },
-  "version": "0.2.0",
+  "version": "0.2.1",
   "komari": ">=1.4.3",
   "entry": "script.js",
   "icon": "assets/icon.svg",
@@ -23,5 +23,18 @@
     "timeout": 60
   },
   "license": "MIT",
-  "repository": "https://github.com/Chen017/komari-plugin-cpu-steal-monitor"
+  "repository": "https://github.com/Chen017/komari-plugin-cpu-steal-monitor",
+  "configuration": {
+    "type": "managed",
+    "data": [
+      {
+        "name": {
+          "zh-CN": "<div style=\"margin:0 0 12px 0;padding:12px 16px;background:rgba(239,68,68,0.08);border-left:4px solid #dc2626;border-radius:4px\"><div style=\"color:#dc2626;font-weight:700;font-size:14px;margin-bottom:6px\">⚠️ 前置说明与推荐主题：可独立采集数据，主题负责图表展示</div><div style=\"font-size:13px;color:#475569;line-height:1.7\">• <b>插件用途</b>：每 2 分钟读取 Linux Agent 的 CPU Steal 计数器，计算宿主机 CPU 抢占率，独立保存历史并提供 REST API（历史、汇总及管理员诊断）。插件可单独运行，不需要额外 VPS 采集程序，但 Agent 必须允许远程命令执行。<br>• <b>强烈推荐搭配主题</b>：Komari 原生界面没有 CPU Steal 历史图表。推荐在主题管理中安装 <a href=\"https://github.com/Chen017/komari-theme-emerald-insights\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color:#dc2626;font-weight:700;text-decoration:underline\">Komari Emerald Insights（翡翠洞察）</a>，即可在节点详情现有 CPU 与系统负载图上叠加 Steal（两分钟均值）曲线，使用同一实时与历史时间轴。<br>• <b>安装提示</b>：可以前往 Komari「主题商店」查找 Komari Emerald Insights，或通过主题仓库安装；不安装主题也不影响插件采集和 API。</div></div>",
+          "zh_CN": "<div style=\"margin:0 0 12px 0;padding:12px 16px;background:rgba(239,68,68,0.08);border-left:4px solid #dc2626;border-radius:4px\"><div style=\"color:#dc2626;font-weight:700;font-size:14px;margin-bottom:6px\">⚠️ 前置说明与推荐主题：可独立采集数据，主题负责图表展示</div><div style=\"font-size:13px;color:#475569;line-height:1.7\">• <b>插件用途</b>：每 2 分钟读取 Linux Agent 的 CPU Steal 计数器，计算宿主机 CPU 抢占率，独立保存历史并提供 REST API（历史、汇总及管理员诊断）。插件可单独运行，不需要额外 VPS 采集程序，但 Agent 必须允许远程命令执行。<br>• <b>强烈推荐搭配主题</b>：Komari 原生界面没有 CPU Steal 历史图表。推荐在主题管理中安装 <a href=\"https://github.com/Chen017/komari-theme-emerald-insights\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color:#dc2626;font-weight:700;text-decoration:underline\">Komari Emerald Insights（翡翠洞察）</a>，即可在节点详情现有 CPU 与系统负载图上叠加 Steal（两分钟均值）曲线，使用同一实时与历史时间轴。<br>• <b>安装提示</b>：可以前往 Komari「主题商店」查找 Komari Emerald Insights，或通过主题仓库安装；不安装主题也不影响插件采集和 API。</div></div>",
+          "en": "<div style=\"margin:0 0 12px 0;padding:12px 16px;background:rgba(239,68,68,0.08);border-left:4px solid #dc2626;border-radius:4px\"><div style=\"color:#dc2626;font-weight:700;font-size:14px;margin-bottom:6px\">⚠️ Recommendation: standalone data collection; companion theme for charts</div><div style=\"font-size:13px;color:#475569;line-height:1.7\">• <b>What this plugin does</b>: Reads Linux CPU steal counters every two minutes using existing Komari Agents, stores history, and serves standalone history, summary, and admin diagnostics REST APIs. No extra VPS collector or theme is required; agents must permit remote commands.<br>• <b>Recommended theme</b>: The default Komari UI does not display a CPU Steal history chart. Strongly recommended: <a href=\"https://github.com/Chen017/komari-theme-emerald-insights\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color:#dc2626;font-weight:700;text-decoration:underline\">Komari Emerald Insights</a>, which adds two-minute Steal averages to the existing CPU/system-load chart on the shared realtime and historical timeline.<br>• <b>Installation</b>: Search the Komari Theme Market or install from the theme repository. The plugin collects and serves data independently even without the theme.</div></div>"
+        },
+        "type": "textbox"
+      }
+    ]
+  }
 }
