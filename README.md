@@ -31,3 +31,7 @@ Anonymous reads are allowed only for unhidden nodes on a public Komari site.
 - Run npm run verify. The workflow uploads installable cpu-steal-monitor.zip.
 - The theme must degrade silently if the plugin API is absent or forbidden.
 - Never accept command content from HTTP requests.
+
+## Troubleshooting
+
+When the Emerald Insights chart shows `Steal -%`, open Komari Admin → Plugins → CPU Steal Monitor → Logs and confirm that collection is running. Check the node's Agent remote command execution setting: `--disable-web-ssh` / `disable_web_ssh=true` disables remote command execution too. When remote control is disabled, the Agent returns `Remote control is disabled.` with exit code -1; the plugin does not produce a fabricated zero. Reinstall this plugin after upgrading to v0.1.1, then allow two full 2-minute sampling ticks for the first delta. If it still has no values, inspect the plugin logs and the `/api/plugin/cpu-steal-monitor/v1/history?uuid=<uuid>` response. The frontend intentionally displays missing readings as `-%`, rather than `0%`.
