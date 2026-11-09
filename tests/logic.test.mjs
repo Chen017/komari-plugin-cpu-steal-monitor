@@ -22,6 +22,19 @@ test('node list normalization and task status',()=>{
  assert.equal(items.get('id1').terminal,true);
  assert.equal(items.get('id2').terminal,false);
 });
+test('real Komari TaskResult array uses client, result and exit_code',()=>{
+ const rows=[
+  {task_id:'task-a',client:'node-uuid-1',result:'STEALV1 12000 20\\n',exit_code:0,finished_at:'2026-11-09T04:20:00Z'},
+  {task_id:'task-a',client:'node-uuid-2',result:'',exit_code:null,finished_at:null},
+ ];
+ const output=L.normalizeResults(rows);
+ assert.equal(output.size,2);
+ assert.equal(output.get('node-uuid-1').output,rows[0].result);
+ assert.equal(output.get('node-uuid-1').terminal,true);
+ assert.equal(output.get('node-uuid-1').failed,false);
+ assert.equal(output.get('node-uuid-2').terminal,false);
+ assert.deepEqual(L.parseCounters(output.get('node-uuid-1').output),{total:12000,steal:20});
+});
 test('history retention',()=>{
  const state={nodes:{a:[{time:0,from:0,value:1}]}};
  L.append(state,'a',{from:90*86400000,time:90*86400000+120000,value:2},90*86400000+120000);
