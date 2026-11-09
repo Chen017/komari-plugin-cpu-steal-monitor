@@ -151,8 +151,9 @@ async function collectRemote(uuids) {
       // Komari can return a not-found error before a task result is created.
       raw = null;
     }
+    const parsed = L.normalizeResults(raw);
     for (const uuid of uuids) {
-      const result = L.normalizeResults(raw).get(uuid);
+      const result = parsed.get(uuid);
       if (!result || !result.terminal || results.has(uuid)) continue;
       const counters = result.failed ? null : L.parseCounters(result.output);
       results.set(uuid, counters ? { counters: { ...counters, time: Date.now() }, status: 'ok' }
