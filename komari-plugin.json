@@ -1,0 +1,23 @@
+{
+  "$schema": "https://komari-monitor.github.io/plugin-sdk/komari-plugin.schema.json",
+  "name": {
+    "zh-CN": "CPU Steal 监控",
+    "en": "CPU Steal Monitor"
+  },
+  "short": "cpu-steal-monitor",
+  "description": {
+    "zh-CN": "每两分钟采集 Linux CPU Steal，向 Emerald Insights 提供历史曲线。",
+    "en": "Two-minute Linux CPU steal observations for Emerald Insights."
+  },
+  "version": "0.1.0",
+  "komari": ">=1.4.3",
+  "entry": "script.js",
+  "icon": "assets/icon.svg",
+  "author": "Chen017",
+  "permissions": {
+    "node": true,
+    "allowSystemRPC": true,
+    "allowRoutes": true,
+    "timeout": 60
+  }
+}
