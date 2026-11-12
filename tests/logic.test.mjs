@@ -36,7 +36,21 @@ test('real Komari TaskResult array uses client, result and exit_code',()=>{
  assert.deepEqual(L.parseCounters(output.get('node-uuid-1').output),{total:12000,steal:20});
 });
 test('history retention',()=>{
- const state={nodes:{a:[{time:0,from:0,value:1}]}};
- L.append(state,'a',{from:90*86400000,time:90*86400000+120000,value:2},90*86400000+120000);
- assert.equal(state.nodes.a.length,1);
+ const now = L.RETENTION_MS + 120000;
+ const cutoff = now - L.RETENTION_MS;
+ const boundary = { from: 0, time: cutoff, value: 1 };
+ const state = { nodes: { a: [{ ...boundary, time: cutoff - 1 }, boundary] } };
+ const latest = { from: now - 120000, time: now, value: 2 };
+ L.append(state, 'a', latest, now);
+ assert.deepEqual(state.nodes.a, [boundary, latest]);
+});
+
+test('terminal failure statuses reject valid-looking stdout', () => {
+ const rows = ['failed', 'timeout', 'error'].map(status => ({
+   client: status, result: 'STEALV1 1000 20', status,
+ }));
+ for (const result of L.normalizeResults(rows).values()) {
+   assert.equal(result.terminal, true);
+   assert.equal(result.failed, true);
+ }
 });

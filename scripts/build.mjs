@@ -1,40 +1,46 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import os from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'komari-plugin.json'), 'utf8'))
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
-if (manifest.version !== pkg.version || manifest.entry !== 'script.js' || manifest.short !== 'cpu-steal-monitor')
-  throw new Error('Manifest mismatch')
-
 const source = fs.readFileSync(path.join(root, 'script.js'), 'utf8')
+const scriptVersion = source.match(/\bconst\s+VERSION\s*=\s*['"]([^'"]+)['"]/)?.[1]
+if (!/^\d+\.\d+\.\d+(?:-[\dA-Za-z.-]+)?$/.test(pkg.version) ||
+    manifest.version !== pkg.version || scriptVersion !== pkg.version ||
+    manifest.entry !== 'script.js' || manifest.short !== 'cpu-steal-monitor')
+  throw new Error('Plugin manifest or version does not match the package and runtime')
+
 const logic = fs.readFileSync(path.join(root, 'logic.cjs'), 'utf8')
 const marker = "const L = require('./logic.cjs');"
-if (!source.includes(marker))
-  throw new Error('Expected logic import missing')
+if (source.split(marker).length !== 2)
+  throw new Error('Expected exactly one logic import')
 
-// Komari executes script.js as a script, not a Node CommonJS wrapper.
-// Inline the tested helper functions so loading never relies on a custom
-// .cjs resolver in the embedded Komari JS runtime.
+// Komari executes script.js without a Node module wrapper.
 const injected = 'const L = (function(){\nvar module={exports:{}};\n' + logic + '\nreturn module.exports;\n})();'
-const bundled = source.replace(marker, injected)
-if (bundled.includes("require('./logic.cjs')"))
-  throw new Error('Unbundled logic import')
+const bundle = source.replace(marker, () => injected)
 
 const out = path.join(root, 'cpu-steal-monitor.zip')
-const stage = fs.mkdtempSync(path.join(os.tmpdir(), 'komari-steal-'))
+const files = ['komari-plugin.json', 'script.js', 'assets/icon.svg', 'README.md', 'LICENSE']
+const timestamp = new Date('2000-01-01T00:00:00Z')
+const stage = fs.mkdtempSync(path.join(root, '.package-'))
 try {
   fs.mkdirSync(path.join(stage, 'assets'))
-  for (const file of ['komari-plugin.json', 'README.md', 'LICENSE'])
-    fs.copyFileSync(path.join(root, file), path.join(stage, file))
-  fs.copyFileSync(path.join(root, 'assets/icon.svg'), path.join(stage, 'assets/icon.svg'))
-  fs.writeFileSync(path.join(stage, 'script.js'), bundled)
-  if (fs.existsSync(out))
-    fs.unlinkSync(out)
-  execFileSync('zip', ['-q', '-X', out, 'komari-plugin.json', 'script.js', 'assets/icon.svg', 'README.md', 'LICENSE'], { cwd: stage })
+  for (const file of files) {
+    const contents = file === 'script.js' ? bundle : fs.readFileSync(path.join(root, file))
+    const staged = path.join(stage, file)
+    fs.writeFileSync(staged, contents)
+    fs.chmodSync(staged, 0o644)
+    fs.utimesSync(staged, timestamp, timestamp)
+  }
+  const candidate = path.join(stage, 'candidate.zip')
+  execFileSync('zip', ['-q', '-X', candidate, ...files], {
+    cwd: stage,
+    env: { ...process.env, TZ: 'UTC' },
+  })
+  fs.renameSync(candidate, out)
   console.log('Built ' + out)
 }
 finally {

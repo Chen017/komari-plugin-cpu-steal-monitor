@@ -16,6 +16,8 @@ let storagePath = '';
 let bootAt = null;
 let lastCycleAt = null;
 let lastSuccessAt = null;
+let historyDirty = false;
+let pendingSuccessAt = null;
 let lastError = null;
 let nodeHealth = {};
 
@@ -29,6 +31,18 @@ function initializeStorage() {
   if (!loaded || loaded.schemaVersion !== 1 || !loaded.nodes || typeof loaded.nodes !== 'object' || Array.isArray(loaded.nodes)) {
     throw new Error('Invalid history file; refusing to overwrite existing data');
   }
+  for (const [uuid, samples] of Object.entries(loaded.nodes)) {
+    if (!Array.isArray(samples)) {
+      delete loaded.nodes[uuid];
+      historyDirty = true;
+      continue;
+    }
+    const ordered = samples.filter(L.isSample).sort((a, b) => a.time - b.time);
+    if (ordered.length !== samples.length || ordered.some((sample, index) => sample !== samples[index])) {
+      loaded.nodes[uuid] = ordered;
+      historyDirty = true;
+    }
+  }
   state = loaded;
 }
 
@@ -36,6 +50,28 @@ function persist() {
   const temporary = storagePath + '.tmp';
   fs.writeFileSync(temporary, JSON.stringify(state), { encoding: 'utf8', mode: 0o600 });
   fs.renameSync(temporary, storagePath);
+  historyDirty = false;
+  if (pendingSuccessAt !== null) {
+    lastSuccessAt = pendingSuccessAt;
+    pendingSuccessAt = null;
+  }
+}
+
+function pruneHistory(nodes, now) {
+  const cutoff = now - L.RETENTION_MS;
+  for (const [uuid, samples] of Object.entries(state.nodes)) {
+    // The loaded and appended histories are sorted by sample end.
+    const firstRetained = nodes.has(uuid) ? samples.findIndex(sample => sample.time >= cutoff) : -1;
+    if (firstRetained === -1) {
+      delete state.nodes[uuid];
+      historyDirty = true;
+    } else if (firstRetained > 0) {
+      state.nodes[uuid] = samples.slice(firstRetained);
+      historyDirty = true;
+    }
+  }
+  for (const uuid of baselines.keys()) if (!nodes.has(uuid)) baselines.delete(uuid);
+  for (const uuid of Object.keys(nodeHealth)) if (!nodes.has(uuid)) delete nodeHealth[uuid];
 }
 
 function json(res, statusCode, payload) {
@@ -170,13 +206,19 @@ async function collectTick() {
   active = true;
   lastCycleAt = Date.now();
   try {
-    const nodes = L.normalizeNodes(await server.call('common:getNodes'));
+    const inventory = await server.call('common:getNodes');
+    if (!inventory || typeof inventory !== 'object') throw new Error('Invalid node inventory');
+    const nodes = L.normalizeNodes(inventory);
+    if (!nodes.size && Object.keys(inventory).length) throw new Error('Invalid node inventory');
+    if (stopped) return;
+    pruneHistory(nodes, Date.now());
     const uuids = [...nodes.keys()];
-    if (!uuids.length) return;
+    if (!uuids.length) {
+      lastError = null;
+      return;
+    }
     const remote = await collectRemote(uuids);
     if (stopped) return;
-    let changed = false;
-    let successes = 0;
     const now = Date.now();
     for (const uuid of uuids) {
       const result = remote.get(uuid);
@@ -191,21 +233,23 @@ async function collectTick() {
       if (!computed) continue;
       if (L.append(state, uuid, computed, now)) {
         nodeHealth[uuid].lastSuccessAt = now;
-        successes++;
-        changed = true;
+        pendingSuccessAt = now;
+        historyDirty = true;
       }
     }
-    for (const uuid of Object.keys(state.nodes)) {
-      if (!nodes.has(uuid)) { delete state.nodes[uuid]; changed = true; }
-    }
-    for (const uuid of Object.keys(nodeHealth)) if (!nodes.has(uuid)) delete nodeHealth[uuid];
-    if (changed) persist();
-    if (successes) lastSuccessAt = Date.now();
     lastError = null;
   } catch (error) {
     lastError = String(error);
     console.error('[CPU-STEAL] collection failed:', lastError);
   } finally {
+    if (!stopped && historyDirty) {
+      try {
+        persist();
+      } catch (error) {
+        lastError = String(error);
+        console.error('[CPU-STEAL] history persistence failed:', lastError);
+      }
+    }
     active = false;
   }
 }

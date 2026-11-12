@@ -35,8 +35,8 @@
 ## 存储和升级
 
 - 使用 Komari `__storageDir__/history.json`，`schemaVersion:1`；保持旧文件兼容。
-- 写临时文件再原子替换，避免半写入；因存储不可用造成持久化失败要在插件日志/管理员健康接口可诊断。
-- 默认保留 90 天，每节点上限 64800 个两分钟窗口。新增节点与删除节点必须能处理，不得外泄隐藏节点 UUID。
+- 写临时文件再原子替换，避免半写入；替换失败时保留旧文件并在管理员健康接口记录错误，下次采集即使没有新样本也会重试。
+- 默认保留 90 天，每节点上限 64800 个两分钟窗口。离线节点的过期记录也会清理。有效空清单会清理已移除节点，无效清单会保留旧历史。
 - 重载插件要重新建立 /proc/stat 基线，不应将上次进程存储的累计计数器跨重启直接相减。
 - plugin 版本在 `package.json`、`komari-plugin.json` 和 `script.js` 同步。
 
@@ -49,7 +49,7 @@
 
 ## 测试、CI 与故障恢复
 
-使用 Node.js 24 并运行：
+在 Linux 或 WSL 使用 Node.js 24、`zip` 和 `unzip`。
 
 ```sh
 npm test
@@ -60,10 +60,10 @@ npm run verify
 - 真实 Komari TaskResult（`client`、`result`、`exit_code`）与兼容字段解析；
 - 首样本基线、2 分钟 delta、reboot/gap、0% 与 null、90 天保存、数据解析；
 - 独立 /history、/summary、/health API，隐藏节点访问隔离、私有站点 403、管理员能查询健康；
-- 正式 ZIP 顶层 manifest/script.js/icon，构建后无 runtime 本地 require；
+- 正式 ZIP 结构及实际脚本加载，验证 Komari 生命周期、Cron、三个路由与版本；
 - 安装在测试 Komari 后核对两次采样、健康接口与主题实时/历史时间轴（此项为真实环境验收，不应被单元测试冒充）。
 
-Actions CI 在 PR/main 上验证并提供可下载 ZIP。独立 `release-on-version-bump.yml` 在 `main` 推送时检查三处版本号一致性；若当前版本没有 Release，则重新执行 `npm run verify`、创建 `vX.Y.Z` 标签并自动发布含 `cpu-steal-monitor.zip` 的 GitHub Release。已发行的相同版本后续提交跳过，不重复发版。遇到 Theme Steal -% 优先检查管理员 `/health` 的 node status，并检查 /history 是否有非空 samples，不要将持续无数据归因于正常的两分钟周期。
+工作流在 PR 和主分支验证一次并提供可下载 ZIP。构建先确认三个版本字段一致，用固定的归档时间和文件清单生成 ZIP，再原子替换输出。发布任务仅在仓库主分支的推送或手动运行中启动，复用该次验证生成的安装包。GitHub API 查询失败时可检查日志并重试，已存在完整附件的版本会跳过发行。
 
 ## 跨仓库联动
 

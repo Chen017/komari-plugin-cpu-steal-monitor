@@ -1,16 +1,27 @@
 name: CPU Steal Monitor CI
+
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
   pull_request:
     branches: [main]
   workflow_dispatch:
+
 permissions:
   contents: read
+
+concurrency:
+  group: cpu-steal-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   verify:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    outputs:
+      release_tag: ${{ steps.release.outputs.tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -18,10 +29,74 @@ jobs:
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '24'
+          package-manager-cache: false
       - run: npm run verify
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: komari-cpu-steal-monitor
           path: cpu-steal-monitor.zip
           if-no-files-found: error
+          compression-level: 0
           retention-days: 14
+      - name: Check whether this version needs its release ZIP
+        id: release
+        if: github.repository == 'Chen017/komari-plugin-cpu-steal-monitor' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v$(node -p "require('./package.json').version")"
+          response="$RUNNER_TEMP/release.json"
+          error_log="$RUNNER_TEMP/release-error.txt"
+          if gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" > "$response" 2> "$error_log"; then
+            if node -e 'const release = require(process.argv[1]); process.exit(release.assets.some(asset => asset.name === "cpu-steal-monitor.zip" && asset.state === "uploaded" && asset.size > 0) ? 0 : 1)' "$response"; then
+              echo "$tag already has a published ZIP."
+              exit 0
+            fi
+          elif ! grep -q 'HTTP 404' "$error_log"; then
+            cat "$error_log" >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+  release:
+    name: Publish verified CPU Steal Monitor ZIP
+    needs: verify
+    if: needs.verify.outputs.release_tag != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: komari-cpu-steal-monitor
+          path: release
+      - name: Create or verify release tag
+        env:
+          RELEASE_TAG: ${{ needs.verify.outputs.release_tag }}
+        run: |
+          tag_ref="refs/tags/$RELEASE_TAG"
+          tags=$(git ls-remote origin "$tag_ref" "$tag_ref^{}")
+          tag_sha=$(awk -v ref="$tag_ref" '$2 == ref {sha=$1} $2 == ref "^{}" {peeled=$1} END {print (peeled ? peeled : sha)}' <<< "$tags")
+          if [[ -n "$tag_sha" ]]; then
+            if [[ "$tag_sha" != "$GITHUB_SHA" ]]; then
+              echo "Tag $RELEASE_TAG already targets $tag_sha, expected $GITHUB_SHA" >&2
+              exit 1
+            fi
+          else
+            git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              tag -a "$RELEASE_TAG" "$GITHUB_SHA" -m "Release $RELEASE_TAG"
+            git push origin "$tag_ref"
+          fi
+      - name: Create or update GitHub Release
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3
+        with:
+          tag_name: ${{ needs.verify.outputs.release_tag }}
+          name: ${{ needs.verify.outputs.release_tag }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          overwrite_files: true
+          fail_on_unmatched_files: true
+          files: release/cpu-steal-monitor.zip

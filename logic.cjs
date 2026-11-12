@@ -55,9 +55,12 @@ function normalizeResults(raw) {
       : typeof value.result === 'string' ? value.result : '';
     const exitCode = typeof value.exit_code === 'number' ? value.exit_code
       : typeof value.exitCode === 'number' ? value.exitCode : null;
+    const status = String(value.status || '').toLowerCase();
+    const failedStatus = ['failed', 'timeout', 'error'].includes(status);
     const terminal = exitCode !== null || Boolean(value.finished_at || value.finishedAt)
-      || ['completed', 'failed', 'timeout', 'error', 'finished'].includes(String(value.status || '').toLowerCase());
-    const failed = (exitCode !== null && exitCode !== 0) || value.success === false || Boolean(value.error);
+      || failedStatus || status === 'completed' || status === 'finished';
+    const failed = failedStatus || (exitCode !== null && exitCode !== 0)
+      || value.success === false || Boolean(value.error);
     results.set(uuid, { output, terminal, failed, exitCode });
   }
   return results;

@@ -89,14 +89,14 @@
 
 ## 开发与维护
 
-从项目根目录使用 **Node.js 24** 和 npm。当前没有第三方 npm 依赖，也没有依赖锁文件；安装和构建无需额外的 `npm ci` 步骤。ZIP 验证使用系统 `unzip`。
+从项目根目录使用 **Node.js 24** 和 npm。当前没有第三方 npm 依赖，也没有依赖锁文件；安装和构建无需额外的 `npm ci` 步骤。在 Linux 或 WSL 使用系统 `zip` 构建，使用 `unzip` 验证。
 
 ```sh
 npm test
 npm run verify
 ```
 
-`npm run verify` 依次执行 Node 测试、生成 Komari 可导入的 ZIP，以及安装包结构与 manifest 校验。测试包括真实 Komari 远程任务结果结构（`client`、`result`、`exit_code`）、两分钟计数器差值、断连和重启缺口、独立汇总 API、权限隔离及主题历史接口兼容。
+`npm run verify` 依次执行 Node 测试、生成 Komari 可导入的 ZIP，以及从 ZIP 加载脚本、核对清单、路由、调度和版本。测试包括真实 Komari 远程任务结果结构（`client`、`result`、`exit_code`）、两分钟计数器差值、断连和重启缺口、独立汇总 API、权限隔离及主题历史接口兼容。
 
 | 目录或文件 | 职责 |
 | --- | --- |
@@ -108,9 +108,9 @@ npm run verify
 
 ### CI 与自动 Release
 
-- **日常 CI：** `.github/workflows/ci.yml` 在面向 `main` 的 PR、`main` 推送和手动触发时执行 `npm run verify`，并上传 `cpu-steal-monitor.zip` 作为 Actions Artifact。
-- **自动发行：** `.github/workflows/release-on-version-bump.yml` 在 `main` 推送时检查 `package.json`、`komari-plugin.json` 与 `script.js` 中的版本号是否一致。如果当前 `vX.Y.Z` 尚未发布，将重新运行测试与 ZIP 校验，自动创建版本标签和 GitHub Release，并将 **可直接安装**的 `cpu-steal-monitor.zip` 作为 Release 附件；相同版本之后的提交不会重复发布。
-- **版本管理：** 发布新版本前同时修改上述三个位置的版本号，避免主分支中出现版本不一致。自动发布需要仓库 Actions 的 `contents: write` 权限。不需要手动上传构建 ZIP。
+- [工作流](.github/workflows/ci.yml) 在面向 `main` 的 PR、工程改动的 `main` 推送和手动触发时运行 `npm run verify`，并上传已验证的 `cpu-steal-monitor.zip`。
+- 当前版本尚无可下载 ZIP 时，`main` 的推送或手动运行会自动发布。发布任务使用同次验证的 ZIP，并检查标签是否指向该提交。已有完整 ZIP 的版本跳过发行。
+- 发布新版本时同步 `package.json`、`komari-plugin.json` 和 `script.js` 的版本。工作流在打包时校验一致性，仓库写权限只在发布任务启用。
 
 当前版本 **[v0.2.2](https://github.com/Chen017/komari-plugin-cpu-steal-monitor/releases/tag/v0.2.2)** 由自动 Release 工作流构建并发布。
 
