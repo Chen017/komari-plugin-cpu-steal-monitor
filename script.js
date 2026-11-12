@@ -6,7 +6,7 @@ const path = require('path');
 const L = require('./logic.cjs');
 const BASE = '/api/plugin/cpu-steal-monitor/v1';
 const COMMAND = "LC_ALL=C awk 'NR==1 && $1==\"cpu\" {total=0;for(i=2;i<=9;i++)total+=$i;printf(\"STEALV1 %.0f %.0f\\n\",total,$9);exit}' /proc/stat";
-const VERSION = '0.2.2';
+const VERSION = '0.2.3';
 
 let state = { schemaVersion: 1, nodes: {} };
 let baselines = new Map();
