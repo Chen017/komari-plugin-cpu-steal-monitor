@@ -79,3 +79,9 @@ npm run verify
 ## 管理说明可点击链接（v0.2.2）
 
 `komari-plugin.json` 管理页的中文、英文静态 `textbox` 必须包含可点击的 [CPU Steal Monitor 插件仓库](https://github.com/Chen017/komari-plugin-cpu-steal-monitor)、[插件 Releases](https://github.com/Chen017/komari-plugin-cpu-steal-monitor/releases) 及 [Komari Emerald Insights 主题仓库](https://github.com/Chen017/komari-theme-emerald-insights) 链接。全部链接使用 `target="_blank"`、`rel="noopener noreferrer"`。保持无输入框、无业务开关，不让主题成为插件运行的必要条件。更改这些链接需同步更新 `tests/manifest-ui.test.mjs`。
+
+## 官方插件商店同步
+
+- 新 Release 通过后检查 [商店 PR #62](https://github.com/komari-monitor/plugin-market/pull/62) 和 [提交单 #61](https://github.com/komari-monitor/plugin-market/issues/61)。核对 `cpu-steal-monitor` 的版本、下载地址和发布 ZIP 的 SHA-256。
+- PR 待合并且条目落后时，通过原提交单请维护者重新处理。官方工作流会从 Release 生成目录条目，PR 的分支由官方机器人管理。
+- 条目合并后，检查官方定期更新是否已为新版本生成目录 PR。核对版本和 SHA-256，缺少更新时通过官方提交流程跟进。
