@@ -109,8 +109,8 @@ npm run verify
 ### CI 与自动 Release
 
 - [工作流](.github/workflows/ci.yml) 在面向 `main` 的 PR、工程改动的 `main` 推送和手动触发时运行 `npm run verify`，并上传已验证的 `cpu-steal-monitor.zip`。
-- 推送 `main` 后，工作流对比最新正式 Release，检测插件源码、清单和构建输入的改动；需要发布时自动递增补丁版本，验证通过后创建标签和 Release，并复用同次验证的 ZIP。纯文档、测试和 CI 改动本身不会触发新版本。
-- 工作流自动同步 `package.json`、`komari-plugin.json` 和 `script.js` 的版本并在打包时校验一致性；仓库写权限只在发布任务启用。
+- 当前版本尚无可下载 ZIP 时，`main` 的推送或手动运行会自动发布。发布任务使用同次验证的 ZIP，并检查标签是否指向该提交。已有完整 ZIP 的版本跳过发行。
+- 发布新版本时同步 `package.json`、`komari-plugin.json` 和 `script.js` 的版本。工作流在打包时校验一致性，仓库写权限只在发布任务启用。
 
 正式安装包由自动 Release 工作流构建，可从 [最新 Release](https://github.com/Chen017/komari-plugin-cpu-steal-monitor/releases/latest) 下载。
 
