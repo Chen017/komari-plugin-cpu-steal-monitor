@@ -151,6 +151,7 @@ npm run verify
 - [Komari Emerald Insights](https://github.com/Chen017/komari-theme-emerald-insights)：现代化前端监控主题，接入本插件的 Steal 图表
 - [Komari Plugin: Availability History](https://github.com/Chen017/komari-plugin-availability-history)：在线率历史事件账本插件
 - [Komari Plugin: IPQA Alert Report](https://github.com/Chen017/komari-plugin-ipqa-alert-report)：IP 质量归档同步与告警报告插件
+- [Line Quality Monitor](https://github.com/Chen017/komari-plugin-line-quality-monitor) · 按 VPS 和探测点追踪延迟退化、波动与改善
 - [IP-Quality-Archive](https://github.com/Chen017/IP-Quality-Archive)：节点端 IP 质量采集工具
 
 ---
